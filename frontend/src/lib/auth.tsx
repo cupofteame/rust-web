@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react';
 import { LoginResponse } from './api';
 
 interface AuthContextType {
@@ -8,23 +8,43 @@ interface AuthContextType {
   token: string | null;
   login: (userData: LoginResponse) => void;
   logout: () => void;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<LoginResponse | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  useEffect(() => {
-    // Check for saved auth data on mount
+  // Handle initial hydration
+  useIsomorphicLayoutEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!isHydrated) return;
+
     const savedAuth = localStorage.getItem('auth');
     if (savedAuth) {
-      const authData = JSON.parse(savedAuth);
-      setUser(authData.user);
-      setToken(authData.token);
+      try {
+        const authData = JSON.parse(savedAuth);
+        if (authData.token && typeof authData.token === 'string') {
+          setUser(authData.user);
+          setToken(authData.token);
+        } else {
+          localStorage.removeItem('auth');
+        }
+      } catch (e) {
+        localStorage.removeItem('auth');
+      }
     }
-  }, []);
+    setIsLoading(false);
+  }, [isHydrated]);
 
   const login = (userData: LoginResponse) => {
     setUser(userData);
@@ -41,8 +61,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('auth');
   };
 
+  // Show nothing until the component has hydrated
+  if (!isHydrated) {
+    return null;
+  }
+
+  // After hydration, show loading state if still loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
