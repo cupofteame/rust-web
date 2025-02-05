@@ -1,38 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Account, getAccounts, createAccount, deleteAccount } from '@/lib/api';
+import { Account, getAccounts, deleteAccount, setAuthToken } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
+  const { user, token, logout } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    if (token) {
+      setAuthToken(token);
+      loadAccounts();
+    } else {
+      router.push('/login');
+    }
+  }, [token, router]);
 
   async function loadAccounts() {
+    setIsLoading(true);
     try {
       const data = await getAccounts();
       setAccounts(data);
       setError('');
     } catch (err) {
       setError('Failed to load accounts');
-    }
-  }
-
-  async function handleCreateAccount(e: React.FormEvent) {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await createAccount(username);
-      setUsername('');
-      await loadAccounts();
-      setError('');
-    } catch (err) {
-      setError('Failed to create account');
+      if (err instanceof Error && err.message.includes('Invalid token')) {
+        logout();
+        router.push('/login');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -44,38 +45,58 @@ export default function Home() {
       await loadAccounts();
       setError('');
     } catch (err) {
-      setError('Failed to delete account');
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
+      if (err instanceof Error && err.message.includes('Invalid token')) {
+        logout();
+        router.push('/login');
+      }
     }
   }
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   return (
     <main className="min-h-screen p-4 sm:p-8">
       <div className="max-w-2xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Account Management</h1>
-          <p className="text-foreground/60">I am messing around with rust!</p>
-        </div>
-        
-        <form onSubmit={handleCreateAccount} className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              className="input flex-1"
-              required
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating...' : 'Create Account'}
-            </button>
+        <div className="flex justify-between items-center">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold mb-2">Account Management</h1>
+            <p className="text-foreground/60">I am messing around with rust!</p>
           </div>
-        </form>
+          <div className="flex gap-4 items-center">
+            {user ? (
+              <>
+                <span className="text-sm text-foreground/60">
+                  Logged in as <strong>{user.username}</strong>
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="btn btn-secondary"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  className="btn btn-secondary"
+                >
+                  Register
+                </Link>
+                <Link
+                  href="/login"
+                  className="btn btn-primary"
+                >
+                  Login
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
 
         {error && (
           <div className="p-4 rounded-lg bg-error-light text-error text-center">
@@ -84,9 +105,11 @@ export default function Home() {
         )}
 
         <div className="space-y-4">
-          {accounts.length === 0 ? (
+          {isLoading ? (
+            <p className="text-center text-foreground/60 py-8">Loading accounts...</p>
+          ) : accounts.length === 0 ? (
             <p className="text-center text-foreground/60 py-8">
-              No accounts found. Create one to get started!
+              No accounts found. Register to get started!
             </p>
           ) : (
             accounts.map((account) => (
@@ -102,7 +125,8 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col">
                     <span className="font-medium">{account.username}</span>
-                    <span className="text-sm text-foreground/60 font-mono">{account.id}</span>
+                    <span className="text-sm text-foreground/60">{account.email}</span>
+                    <span className="text-xs text-foreground/60 font-mono">{account.id}</span>
                   </div>
                 </div>
                 <button
