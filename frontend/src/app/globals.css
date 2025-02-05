@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --error: #ef4444;
+  --error-hover: #dc2626;
+  --error-light: #fee2e2;
+  --border: #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --error: #ef4444;
+    --error-hover: #f87171;
+    --error-light: #450a0a;
+    --border: #27272a;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-hover;
+  }
+  
+  .btn-danger {
+    @apply bg-error text-white hover:bg-error-hover;
+  }
+  
+  .input {
+    @apply px-4 py-2 rounded-lg border border-border bg-background 
+    focus:outline-none focus:border-primary focus:border-2;
+  }
+}
