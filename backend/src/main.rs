@@ -13,6 +13,8 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, errors::Error as JwtError};
 use time::{Duration, OffsetDateTime};
 use std::env;
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 
 const TOKEN_DURATION_HOURS: i64 = 24;
 
@@ -199,7 +201,27 @@ async fn get_accounts(req: HttpRequest, data: web::Data<AppState>) -> Result<Htt
                     }
                 }
             }
-            Ok(HttpResponse::Ok().json(accounts))
+            
+            // Generate ETag based on a simpler hash of account IDs and usernames
+            let mut hasher = DefaultHasher::new();
+            for account in &accounts {
+                account.id.hash(&mut hasher);
+                account.username.hash(&mut hasher);
+                account.email.hash(&mut hasher);
+            }
+            let etag = format!("\"{:x}\"", hasher.finish());
+            
+            // Check if client has matching ETag
+            if let Some(if_none_match) = req.headers().get("if-none-match") {
+                if if_none_match == etag.as_str() {
+                    return Ok(HttpResponse::NotModified().finish());
+                }
+            }
+            
+            Ok(HttpResponse::Ok()
+                .insert_header(("ETag", etag))
+                .insert_header(("Cache-Control", "private, must-revalidate"))
+                .json(accounts))
         }
         Err(e) => {
             eprintln!("Error fetching accounts: {:?}", e);
@@ -209,20 +231,25 @@ async fn get_accounts(req: HttpRequest, data: web::Data<AppState>) -> Result<Htt
 }
 
 // Delete an account by id
-// Todo: Logout user if delete own acc (right away)
 async fn delete_account(
     req: HttpRequest,
     data: web::Data<AppState>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
-    // Verify token
-    verify_token(&req, &data).await?;
-
+    // Verify token and get claims
+    let claims = verify_token(&req, &data).await?;
+    
     let collection = data.db.collection::<Account>("accounts");
     match collection.delete_one(doc! { "id": &*id }, None).await {
         Ok(delete_result) => {
             if delete_result.deleted_count == 1 {
-                Ok(HttpResponse::NoContent().finish())
+                // Check if user deleted their own account
+                if claims.sub == *id {
+                    // Return special status code to indicate client should logout
+                    Ok(HttpResponse::Ok().json(doc! { "should_logout": true }))
+                } else {
+                    Ok(HttpResponse::NoContent().finish())
+                }
             } else {
                 Ok(HttpResponse::NotFound().json(doc! { "error": "Account not found" }))
             }
@@ -233,8 +260,6 @@ async fn delete_account(
         }
     }
 }
-
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -248,7 +273,12 @@ async fn main() -> std::io::Result<()> {
 
     let mut client_options = ClientOptions::parse(&mongo_uri)
         .await
-        .expect("Failed to parse MongoDB connection string");
+        .expect("Failed to parse MongoDB URI");
+    
+    // Add connection pool settings
+    client_options.max_pool_size = Some(10);  // Adjust based on your needs
+    client_options.min_pool_size = Some(2);
+    client_options.max_idle_time = Some(std::time::Duration::from_secs(60));
     client_options.app_name = Some("RustWebBackend".to_string());
     let client = Client::with_options(client_options).expect("Failed to initialize MongoDB client");
     let db = client.database("accounts");

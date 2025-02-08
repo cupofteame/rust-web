@@ -45,6 +45,10 @@ function getHeaders() {
 export async function getAccounts(): Promise<Account[]> {
   const response = await fetch(`${API_URL}/accounts`, {
     headers: getHeaders(),
+    next: {
+      revalidate: 0,
+      tags: ['accounts']
+    }
   });
   if (!response.ok) {
     throw new Error('Failed to fetch accounts');
@@ -52,15 +56,23 @@ export async function getAccounts(): Promise<Account[]> {
   return response.json();
 }
 
-export async function deleteAccount(id: string): Promise<void> {
+export async function deleteAccount(id: string): Promise<boolean> {
   const response = await fetch(`${API_URL}/accounts/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
   });
-  if (!response.ok) {
+  if (!response.ok && response.status !== 200) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to delete account');
   }
+  
+  // If we get a 200 response, check if we should logout
+  if (response.status === 200) {
+    const data = await response.json();
+    return data.should_logout;
+  }
+  
+  return false;
 }
 
 export async function register(data: RegisterRequest): Promise<Account> {
