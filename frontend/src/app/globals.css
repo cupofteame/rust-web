@@ -1,44 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --error: #ef4444;
-  --error-hover: #dc2626;
-  --error-light: #fee2e2;
-  --border: #e5e7eb;
+  --background: 255 255 255;
+  --foreground: 23 23 23;
+  --primary: 139 92 246;
+  --primary-hover: 124 58 237;
+  --secondary: 196 181 253;
+  --accent: 109 40 217;
+  --error: 239 68 68;
+  --error-hover: 220 38 38;
+  --error-light: 254 226 226;
+  --border: 229 231 235;
+  --card: 249 250 251;
+  --card-hover: 243 244 246;
+  --muted: 107 114 128;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --error: #ef4444;
-    --error-hover: #f87171;
-    --error-light: #450a0a;
-    --border: #27272a;
+    --background: 15 15 15;
+    --foreground: 243 244 246;
+    --primary: 139 92 246;
+    --primary-hover: 159 122 234;
+    --secondary: 76 29 149;
+    --accent: 124 58 237;
+    --error: 239 68 68;
+    --error-hover: 248 113 113;
+    --error-light: 69 10 10;
+    --border: 39 39 42;
+    --card: 26 26 26;
+    --card-hover: 38 38 38;
+    --muted: 156 163 175;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1 {
+    @apply text-4xl font-bold tracking-tight mb-4;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold tracking-tight mb-3;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold tracking-tight mb-2;
+  }
+
+  p {
+    @apply leading-relaxed text-base text-foreground/80;
+  }
 }
 
 @layer components {
+  .container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 inline-flex items-center justify-center;
   }
   
   .btn-primary {
     @apply bg-primary text-white hover:bg-primary-hover;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-foreground hover:bg-opacity-80;
   }
   
   .btn-danger {
@@ -46,7 +83,73 @@ body {
   }
   
   .input {
-    @apply px-4 py-2 rounded-lg border border-border bg-background 
-    focus:outline-none focus:border-primary focus:border-2;
+    @apply w-full px-4 py-2 rounded-lg border border-border bg-background
+    text-foreground placeholder:text-muted
+    focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
+    transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-card p-6 rounded-xl border border-border;
+  }
+
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-foreground/80;
+  }
+
+  .error-message {
+    @apply bg-error-light text-error px-4 py-3 rounded-lg;
+  }
+}
+
+/* Animations */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulseSubtle 2s infinite;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
   }
 }

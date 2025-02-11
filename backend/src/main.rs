@@ -15,6 +15,8 @@ use time::{Duration, OffsetDateTime};
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::sync::Mutex;
+use std::collections::HashSet;
 
 const TOKEN_DURATION_HOURS: i64 = 24;
 
@@ -56,6 +58,7 @@ struct Claims {
 struct AppState {
     db: Database,
     jwt_secret: String,
+    token_blacklist: Mutex<HashSet<String>>,
 }
 
 // Register a new account
@@ -166,7 +169,15 @@ async fn verify_token(req: &HttpRequest, data: &web::Data<AppState>) -> Result<C
     if let Some(auth_header) = req.headers().get("Authorization") {
         if let Ok(auth_str) = auth_header.to_str() {
             if auth_str.starts_with("Bearer ") {
-                let token = &auth_str[7..]; // Skip "Bearer "
+                let token = &auth_str[7..];
+                
+                // Check if token is blacklisted
+                let blacklist = data.token_blacklist.lock().unwrap();
+                if blacklist.contains(token) {
+                    return Err(actix_web::error::ErrorUnauthorized("Token is invalid"));
+                }
+                
+                // Continue with existing token verification
                 if let Ok(token_data) = decode::<Claims>(
                     token,
                     &DecodingKey::from_secret(data.jwt_secret.as_bytes()),
@@ -261,6 +272,23 @@ async fn delete_account(
     }
 }
 
+async fn logout(
+    req: HttpRequest,
+    data: web::Data<AppState>,
+) -> Result<HttpResponse, Error> {
+    if let Some(auth_header) = req.headers().get("Authorization") {
+        if let Ok(auth_str) = auth_header.to_str() {
+            if auth_str.starts_with("Bearer ") {
+                let token = auth_str[7..].to_string();
+                // Add token to blacklist
+                let mut blacklist = data.token_blacklist.lock().unwrap();
+                blacklist.insert(token);
+            }
+        }
+    }
+    Ok(HttpResponse::Ok().json(doc! { "message": "Logged out successfully" }))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -285,6 +313,12 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server at http://localhost:8080");
 
+    let app_state = web::Data::new(AppState {
+        db,
+        jwt_secret: jwt_secret.clone(),
+        token_blacklist: Mutex::new(HashSet::new()),
+    });
+
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
@@ -293,14 +327,15 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .app_data(web::Data::new(AppState {
-                db: db.clone(),
-                jwt_secret: jwt_secret.clone(),
-            }))
-            .route("/api/accounts", web::get().to(get_accounts))
-            .route("/api/accounts/{id}", web::delete().to(delete_account))
-            .route("/api/auth/register", web::post().to(register))
-            .route("/api/auth/login", web::post().to(login))
+            .app_data(app_state.clone())
+            .service(
+                web::scope("/api")
+                    .route("/auth/register", web::post().to(register))
+                    .route("/auth/login", web::post().to(login))
+                    .route("/auth/logout", web::post().to(logout))
+                    .route("/accounts", web::get().to(get_accounts))
+                    .route("/accounts/{id}", web::delete().to(delete_account))
+            )
     })
     .bind("127.0.0.1:8080")?
     .run()

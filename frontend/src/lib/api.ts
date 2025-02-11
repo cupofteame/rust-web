@@ -103,4 +103,16 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
     throw new Error(error.error || 'Failed to login');
   }
   return response.json();
+}
+
+export async function logout(): Promise<void> {
+  const response = await fetch(`${API_URL}/auth/logout`, {
+    method: 'POST',
+    headers: getHeaders(),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to logout');
+  }
 } 

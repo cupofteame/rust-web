@@ -9,17 +9,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        primary: "var(--primary)",
-        "primary-hover": "var(--primary-hover)",
-        error: "var(--error)",
-        "error-hover": "var(--error-hover)",
-        "error-light": "var(--error-light)",
-        border: "var(--border)",
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
+        primary: "rgb(var(--primary) / <alpha-value>)",
+        "primary-hover": "rgb(var(--primary-hover) / <alpha-value>)",
+        secondary: "rgb(var(--secondary) / <alpha-value>)",
+        accent: "rgb(var(--accent) / <alpha-value>)",
+        error: "rgb(var(--error) / <alpha-value>)",
+        "error-hover": "rgb(var(--error-hover) / <alpha-value>)",
+        "error-light": "rgb(var(--error-light) / <alpha-value>)",
+        border: "rgb(var(--border) / <alpha-value>)",
+        card: "rgb(var(--card) / <alpha-value>)",
+        "card-hover": "rgb(var(--card-hover) / <alpha-value>)",
+        muted: "rgb(var(--muted) / <alpha-value>)",
       },
-      ringColor: {
-        primary: "var(--primary)",
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'pulse-subtle': 'pulseSubtle 2s infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        pulseSubtle: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
+        },
       },
     },
   },

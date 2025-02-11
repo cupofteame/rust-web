@@ -5,6 +5,7 @@ import { Account, getAccounts, deleteAccount, setAuthToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { UserCircleIcon, ArrowRightOnRectangleIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 
 export default function Home() {
   const router = useRouter();
@@ -69,23 +70,25 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen p-4 sm:p-8">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold mb-2">Account Management</h1>
-            <p className="text-foreground/60">I am messing around with rust!</p>
+    <main className="min-h-screen p-4 sm:p-8 animate-fade-in">
+      <div className="container">
+        <header className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
+          <div className="text-center sm:text-left">
+            <h1 className="mb-2">Account Panel</h1>
+            <p className="text-muted">I am messing with rust!</p>
           </div>
+          
           <div className="flex gap-4 items-center">
             {user ? (
               <>
-                <span className="text-sm text-foreground/60">
-                  Logged in as <strong>{user.username}</strong>
+                <span className="text-sm text-muted">
+                  Logged in as <strong className="text-foreground">{user.username}</strong>
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="btn btn-secondary"
+                  className="btn btn-secondary inline-flex items-center gap-2"
                 >
+                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
                   Logout
                 </button>
               </>
@@ -93,66 +96,75 @@ export default function Home() {
               <>
                 <Link
                   href="/register"
-                  className="btn btn-secondary"
+                  className="btn btn-secondary inline-flex items-center gap-2"
                 >
+                  <UserPlusIcon className="w-5 h-5" />
                   Register
                 </Link>
                 <Link
                   href="/login"
-                  className="btn btn-primary"
+                  className="btn btn-primary inline-flex items-center gap-2"
                 >
+                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
                   Login
                 </Link>
               </>
             )}
           </div>
-        </div>
+        </header>
 
         {error && (
-          <div className="p-4 rounded-lg bg-error-light text-error text-center">
+          <div className="error-message mb-6">
             {error}
           </div>
         )}
 
         <div className="space-y-4">
           {isInitialLoad ? (
-            <p className="text-center text-foreground/60 py-8">Loading accounts...</p>
+            <div className="card text-center">
+              <p className="text-muted animate-pulse-subtle">Loading accounts...</p>
+            </div>
           ) : accounts.length === 0 ? (
-            <p className="text-center text-foreground/60 py-8">
-              No accounts found. Register to get started!
-            </p>
+            <div className="card text-center">
+              <h2 className="text-xl font-semibold mb-2">No Accounts Found</h2>
+              <p className="text-muted mb-4">Get started by registering your first account!</p>
+              <Link href="/register" className="btn btn-primary">
+                Register Now
+              </Link>
+            </div>
           ) : (
             <>
               {isLoading && (
-                <div className="text-center text-foreground/60 text-sm py-2">
+                <div className="text-center text-muted text-sm py-2 animate-pulse-subtle">
                   Refreshing...
                 </div>
               )}
-              {accounts.map((account) => (
-                <div
-                  key={account.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary font-medium">
-                        {account.username[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{account.username}</span>
-                      <span className="text-sm text-foreground/60">{account.email}</span>
-                      <span className="text-xs text-foreground/60 font-mono">{account.id}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteAccount(account.id)}
-                    className="btn btn-danger"
+              <div className="grid gap-4">
+                {accounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="card flex items-center justify-between hover:scale-[1.01] transition-transform"
                   >
-                    Delete
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <UserCircleIcon className="w-8 h-8 text-primary" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-lg">{account.username}</span>
+                        <span className="text-muted">{account.email}</span>
+                        <span className="text-xs text-muted font-mono mt-1">{account.id}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteAccount(account.id)}
+                      className="btn btn-danger ml-4 inline-flex items-center gap-2"
+                    >
+                      <TrashIcon className="w-5 h-5" />
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </div>

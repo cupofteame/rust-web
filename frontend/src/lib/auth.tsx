@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useLayoutEffect } from 'react';
-import { LoginResponse } from './api';
+import { LoginResponse, logout as apiLogout } from './api';
 
 interface AuthContextType {
   user: LoginResponse | null;
@@ -55,10 +55,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('auth');
+  const logout = async () => {
+    try {
+      await apiLogout();
+      // Batch state updates together
+      Promise.all([
+        new Promise<void>(resolve => {
+          setUser(null);
+          setToken(null);
+          resolve();
+        }),
+        new Promise<void>(resolve => {
+          localStorage.removeItem('auth');
+          resolve();
+        })
+      ]).catch(console.error);
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still clear local state even if API call fails
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('auth');
+    }
   };
 
   // Show nothing until the component has hydrated
